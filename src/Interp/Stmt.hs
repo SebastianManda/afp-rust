@@ -2,7 +2,7 @@ module Interp.Stmt where
 
 import Evaluator
 
-import Lang.Abs ( Stmt(..), Exp )
+import Lang.Abs ( Stmt(..), Exp, Ident )
 
 import Env
 import Value ( Value( VBool, VEmpty )
@@ -10,6 +10,7 @@ import Value ( Value( VBool, VEmpty )
 
 import qualified Interp.Expr as E
 import Control.Monad (foldM)
+import Data.Map (toList)
 
 -- STATEMENT INTERPRETER -------------------------------------------------------------
 
@@ -29,8 +30,20 @@ propagate stmts e env = do
         Right nenv' -> do
             val <- E.interp e nenv'
             case val of
-                VEmpty -> return (Right nenv')
+                VEmpty -> return (Right (collapseEnvs env nenv'))
                 _      -> return (Left val)
+
+collapseEnvs :: (Env Value, Env Closure) -> (Env Value, Env Closure) -> (Env Value, Env Closure)
+collapseEnvs (vars1, funs1) (vars2, funs2) = (vars1 `merge` toList vars2, funs1 `merge` toList funs2)
+  where
+    merge :: Env a -> [(Ident, (a, Bool))] -> Env a
+    merge oenv nenv = case nenv of
+        [] -> oenv
+        ((k, (v, b)):kvs) -> case Env.lookup k oenv of
+            Just (_, True) | b -> case update k v oenv of
+                Just noenv -> merge noenv kvs
+                Nothing    -> merge oenv kvs
+            _ -> merge oenv kvs
 
 interp :: Stmt -> (Env Value, Env Closure) -> Result (Either Value (Env Value, Env Closure))
 
