@@ -39,7 +39,7 @@ comparison (e1, e2) env =  do
 infer :: Exp -> (Env Type, Env TClosure) -> Result Type
 
 -- Void
-infer EVoid _ = return TEmpty
+infer EVoid _ = return TVoid
 
 -- Arithmetic
 infer (EInt _) _ = return TInt

@@ -11,9 +11,9 @@ import Value ( Value( VBool, VEmpty )
 import qualified Interp.Expr as E
 import Control.Monad (foldM)
 import Data.Map (toList)
+import qualified Data.Map as Map
 
--- STATEMENT INTERPRETER -------------------------------------------------------------
-
+-- | Interprets a list of statements. Returns the final environment.
 prepare :: [Stmt] -> (Env Value, Env Closure) -> Result (Either Value (Env Value, Env Closure))
 prepare []           env = return (Right env)
 prepare (stmt:stmts) env = do
@@ -22,6 +22,7 @@ prepare (stmt:stmts) env = do
         Right (Left val)   -> return (Left val)
         Right (Right nenv) -> do prepare stmts nenv
 
+-- | Propagates the value of the expression through the statements. (Helper function for control flow)
 propagate :: [Stmt] -> Exp -> (Env Value, Env Closure) -> Result (Either Value (Env Value, Env Closure))
 propagate stmts e env = do
     nenv <- prepare stmts env
@@ -33,17 +34,20 @@ propagate stmts e env = do
                 VEmpty -> return (Right (collapseEnvs env nenv'))
                 _      -> return (Left val)
 
+-- | Collapses the environments by merging the variables and functions. Updates original env with changed mutables.
 collapseEnvs :: (Env Value, Env Closure) -> (Env Value, Env Closure) -> (Env Value, Env Closure)
 collapseEnvs (vars1, funs1) (vars2, funs2) = (vars1 `merge` toList vars2, funs1 `merge` toList funs2)
   where
     merge :: Env a -> [(Ident, (a, Bool))] -> Env a
     merge oenv nenv = case nenv of
         [] -> oenv
-        ((k, (v, b)):kvs) -> case Env.lookup k oenv of
+        ((k, (v, b)):kvs) -> case Map.lookup k oenv of
             Just (_, True) | b -> case update k v oenv of
                 Just noenv -> merge noenv kvs
                 Nothing    -> merge oenv kvs
             _ -> merge oenv kvs
+
+-- STATEMENT INTERPRETER -------------------------------------------------------------
 
 interp :: Stmt -> (Env Value, Env Closure) -> Result (Either Value (Env Value, Env Closure))
 

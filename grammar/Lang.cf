@@ -14,7 +14,7 @@ Program. Program ::= [Stmt] Exp0 ;
 
 TInt.   Type1 ::= "int";
 TBool.  Type1 ::= "bool";
-TEmpty. Type1 ::= "empty";
+TVoid.  Type1 ::= "void";
 
 _. Type2 ::= "(" Type ")";
 _. Type1 ::= Type2;

@@ -8,15 +8,14 @@ import Value ( TClosure( TFun ) )
 
 import Lang.Abs ( Stmt(..)
                 , Type
-                , Type( TBool, TEmpty )
+                , Type( TBool, TVoid )
                 , Exp )
 
 import qualified TypeCheck.Expr as E
 import Control.Monad (foldM)
 import Data.List (nub)
 
--- STATEMENT TYPE CHECKER ------------------------------------------------------------
-
+-- | Prepares a list of statements. Returns the final environment.
 prepare :: [Stmt] -> (Env Type, Env TClosure) -> Result (Either Type (Env Type, Env TClosure))
 prepare []           env = return (Right env)
 prepare (stmt:stmts) env = do
@@ -25,6 +24,7 @@ prepare (stmt:stmts) env = do
         Right (Left val)   -> return (Left val)
         Right (Right nenv) -> do prepare stmts nenv
 
+-- | Propagates the type of the expression through the statements. (Helper function for control flow)
 propagate :: [Stmt] -> Exp -> (Env Type, Env TClosure) -> Result (Either Type (Env Type, Env TClosure))
 propagate stmts t env = do
     nenv <- prepare stmts env
@@ -33,8 +33,10 @@ propagate stmts t env = do
         Right nenv' -> do
             val <- E.infer t nenv'
             case val of
-                TEmpty -> return (Right nenv')
+                TVoid -> return (Right nenv')
                 _      -> return (Left val)
+
+-- STATEMENT TYPE CHECKER ------------------------------------------------------------
 
 infer :: Stmt -> (Env Type, Env TClosure) -> Result (Either Type (Env Type, Env TClosure))
 

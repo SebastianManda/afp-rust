@@ -14,11 +14,6 @@ find id env =  case Map.lookup id env of
     Just (v, _) -> Just v
     Nothing      -> Nothing
 
-lookup :: Ident -> Env a -> Maybe (a, Bool)
-lookup id env =  case Map.lookup id env of
-    Just (v, b) -> Just (v, b)
-    Nothing      -> Nothing
-
 bind :: Ident -> a -> Env a -> Env a
 bind id val = Map.insert id (val, False)
 
@@ -27,5 +22,5 @@ bindMut id val = Map.insert id (val, True)
 
 update :: Ident -> a -> Env a -> Maybe (Env a)
 update id val env = case Map.lookup id env of
-    Just (_, True) -> Just (Map.insert id (val, True) env)
+    Just (v, True) -> Just (Map.insert id (val, True) env)
     _              -> Nothing

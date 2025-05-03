@@ -23,6 +23,7 @@ test = hspec $ do
         tcTest "True && False" TBool
         tcTest "let x = 3; x * x" TInt
         tcTest "fun isZero (x : int) = x == 0; isZero 42" TBool
+        tcTest "fun square (x : int) = x * x;" TVoid
 
     describe "typeChecker: bad weather tests" $ do
         tcErrorTest "let x = 2 in x + True"
@@ -33,3 +34,11 @@ test = hspec $ do
         tcTest "let mut x = 2; set x = 1; x" TInt
         tcTest "let mut x = 2; set x = True; x" TBool
         tcErrorTest "let x = 2; set x = True; x"
+
+    describe "typeChecker: control-flow" $ do
+        tcTest "let mut x = 2; if x == 2 { set x = x + 1; } else { set x = x - 1; } x" TInt
+        tcTest "let mut x = 2; if x == 3 { set x = x + 1; } else { set x = x - 1; } x" TInt
+        tcTest "let mut x = 2; if x == 3 { True } else { False }" TBool
+        tcTest "let mut x = 2; while x < 5 { set x = x + 1; } x" TInt
+        tcTest "let mut x = 6; while x < 5 { set x = x + 1; } x" TInt
+        tcErrorTest "let mut x = 2; if x == 3 { True } else { 0 }"
