@@ -26,6 +26,9 @@ logic (e1, e2) env f =  do
 
 interp :: Exp -> (Env Value, Env Closure) -> Result Value
 
+-- Void
+interp EVoid _ = return VEmpty
+
 -- Arithmetic
 interp (EInt i) _ = return $ VInt i
 

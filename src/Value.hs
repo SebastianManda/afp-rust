@@ -7,6 +7,7 @@ import Lang.Abs ( Exp
 data Value 
     = VInt Integer
     | VBool Bool
+    | VEmpty
   deriving (Show, Eq)
 
 data Closure = Fun Ident Exp

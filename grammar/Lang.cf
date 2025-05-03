@@ -3,16 +3,18 @@
 
 entrypoints Program;
 
-Program. Program ::= [Stmt] Exp ;
+Program. Program ::= [Stmt] Exp0 ;
 
 --This is the syntax from BNFC to define a list of statements
 [].    [Stmt] ::= ;
 (:).   [Stmt] ::= Stmt ";" [Stmt] ;
+(:).   [Stmt] ::= Stmt1 [Stmt] ;
 
 -- TYPES --------------------------------------------------------------
 
-TInt.  Type1 ::= "int";
-TBool. Type1 ::= "bool";
+TInt.   Type1 ::= "int";
+TBool.  Type1 ::= "bool";
+TEmpty. Type1 ::= "empty";
 
 _. Type2 ::= "(" Type ")";
 _. Type1 ::= Type2;
@@ -20,10 +22,13 @@ _. Type  ::= Type1;
 
 -- STATEMENTS ---------------------------------------------------------
 
-SUpdate.    Stmt ::= "set" Ident "=" Exp;
-SLet.       Stmt ::= "let" Ident "=" Exp ;
-SMut.       Stmt ::= "let" "mut" Ident "=" Exp ;
-SFun.       Stmt ::= "fun" Ident "(" Ident ":" Type ") =" Exp ;
+SSet.       Stmt  ::= "set" Ident "=" Exp;
+SLet.       Stmt  ::= "let" Ident "=" Exp ;
+SMut.       Stmt  ::= "let" "mut" Ident "=" Exp ;
+SFun.       Stmt  ::= "fun" Ident "(" Ident ":" Type ") =" Exp ;
+SIf.        Stmt1 ::= "if" Exp "{" [Stmt] Exp0 "}" ;
+SIfElse.    Stmt1 ::= "if" Exp "{" [Stmt] Exp0 "}" "else" "{" [Stmt] Exp0 "}" ;
+SWhile.     Stmt1 ::= "while" Exp "{" [Stmt] "}" ;
 
 -- EXPRESSIONS --------------------------------------------------------
 
@@ -58,7 +63,8 @@ EIf.  Exp8 ::= "if" Exp "then" Exp "else" Exp;
 EVar. Exp8 ::= Ident;
 
 -- Functions
-EApp. Exp8 ::= Ident Exp7;
+EApp.   Exp8 ::= Ident Exp7;
+EVoid.  Exp0 ::= ;
 
 -- This part sets up the order of operation
 _. Exp8 ::= "(" Exp ")" ;
@@ -70,3 +76,4 @@ _. Exp3 ::= Exp4 ;
 _. Exp2 ::= Exp3 ;
 _. Exp1 ::= Exp2 ;
 _. Exp  ::= Exp1 ;
+_. Exp0 ::= Exp ;
