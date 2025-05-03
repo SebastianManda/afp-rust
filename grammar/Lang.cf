@@ -20,8 +20,10 @@ _. Type  ::= Type1;
 
 -- STATEMENTS ---------------------------------------------------------
 
-SLet. Stmt ::= "val" Ident "=" Exp ;
-SFun. Stmt ::= "fun" Ident "(" Ident ":" Type ") =" Exp ;
+SUpdate.    Stmt ::= "set" Ident "=" Exp;
+SLet.       Stmt ::= "let" Ident "=" Exp ;
+SMut.       Stmt ::= "let" "mut" Ident "=" Exp ;
+SFun.       Stmt ::= "fun" Ident "(" Ident ":" Type ") =" Exp ;
 
 -- EXPRESSIONS --------------------------------------------------------
 
@@ -52,7 +54,7 @@ EGeq. Exp4 ::= Exp4 ">=" Exp5;
 EIf.  Exp8 ::= "if" Exp "then" Exp "else" Exp;
 
 -- Let bindings
-ELet. Exp8 ::= "let" Ident "=" Exp "in" Exp;
+-- ELet. Exp8 ::= "let" Ident "=" Exp "in" Exp;
 EVar. Exp8 ::= Ident;
 
 -- Functions

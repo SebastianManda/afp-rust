@@ -18,4 +18,14 @@ interp (SLet x e) env@(vars, funs) = do
     val <- E.interp e env
     return (bind x val vars, funs)
 
+interp (SMut x e) env@(vars, funs) = do
+    val <- E.interp e env
+    return (bindMut x val vars, funs)
+
+interp (SUpdate x e) env@(vars, funs) = do
+    val <- E.interp e env
+    case update x val vars of
+        Nothing -> throw $ "Cannot update immutable variable"
+        Just v  -> return (v, funs)
+
 interp (SFun f x _ e) env@(vars, funs) = return (vars, bind f (Fun x e) funs)

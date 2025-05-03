@@ -82,9 +82,9 @@ infer (EIf c iff els) env = do
         _     -> throw "Condition must be a boolean"
 
 -- Let bindings
-infer (ELet x e body) env@(vars, funs) = do
-    t <- infer e env
-    infer body (bind x t vars, funs)
+-- infer (ELet x e body) env@(vars, funs) = do
+--     t <- infer e env
+--     infer body (bind x t vars, funs)
 infer (EVar x) (vars, _) =
     case find x vars of
         Just t  -> return t

@@ -20,14 +20,16 @@ tcErrorTest input =
 test :: IO ()
 test = hspec $ do
     describe "typeChecker: good weather tests" $ do
-        tcTest "let x = 2 in x + 3" TInt
         tcTest "True && False" TBool
-
-        tcTest "val x = 3; x * x" TInt
-
+        tcTest "let x = 3; x * x" TInt
         tcTest "fun isZero (x : int) = x == 0; isZero 42" TBool
 
     describe "typeChecker: bad weather tests" $ do
         tcErrorTest "let x = 2 in x + True"
         tcErrorTest "True && 3"
         tcErrorTest "fun increment (x : int) = x + 1; increment True"
+
+    describe "typeChecker: mutation" $ do
+        tcTest "let mut x = 2; set x = 1; x" TInt
+        tcTest "let mut x = 2; set x = True; x" TBool
+        tcErrorTest "let x = 2; set x = True; x"

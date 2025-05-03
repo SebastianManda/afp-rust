@@ -88,9 +88,9 @@ interp (EIf c iff els) env = do
         _           -> throw "Condition must be a boolean"
 
 -- Let bindings
-interp (ELet x e body) env@(vars, funs) = do
-    arg <- interp e env
-    interp body (bind x arg vars, funs)
+-- interp (ELet x e body) env@(vars, funs) = do
+--     arg <- interp e env
+--     interp body (bind x arg vars, funs)
 interp (EVar x) (vars, _) =
     case find x vars of
         Just val -> return val
