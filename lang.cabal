@@ -63,6 +63,7 @@ test-suite test
     other-modules:    InterpTests
                     , TypeCheckTests
                     , BogusTests
+                    , ParseTests
 
     build-depends:    grammar
                     , lang
