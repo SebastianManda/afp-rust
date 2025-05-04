@@ -1,22 +1,17 @@
 module TypeCheck.Stmt where
 
-import Evaluator
+import qualified TypeCheck.Expr as E ( infer, appFunc )
 
-import Env
-
-import Value ( TClosure( TFun ) )
-
-import Lang.Abs ( Stmt(..)
-                , Type
-                , Type( TBool, TVoid )
-                , Exp )
-
-import qualified TypeCheck.Expr as E
-import Control.Monad (foldM)
 import Data.List (nub)
+import Evaluator ( Result, throw )
+import Env ( Env, bind, bindMut, update )
+import Value ( TClosure( TFun ), TypeCheckEnv )
+import Lang.Abs ( Stmt(..), Type, Type(TBool, TVoid), Exp, Param(..) )
+import Control.Monad (foldM)
+
 
 -- | Prepares a list of statements. Returns the final environment.
-prepare :: [Stmt] -> (Env Type, Env TClosure) -> Result (Either Type (Env Type, Env TClosure))
+prepare :: [Stmt] -> TypeCheckEnv -> Result (Either Type TypeCheckEnv)
 prepare []           env = return (Right env)
 prepare (stmt:stmts) env = do
     case infer stmt env of
@@ -25,7 +20,7 @@ prepare (stmt:stmts) env = do
         Right (Right nenv) -> do prepare stmts nenv
 
 -- | Propagates the type of the expression through the statements. (Helper function for control flow)
-propagate :: [Stmt] -> Exp -> (Env Type, Env TClosure) -> Result (Either Type (Env Type, Env TClosure))
+propagate :: [Stmt] -> Exp -> TypeCheckEnv -> Result (Either Type TypeCheckEnv)
 propagate stmts t env = do
     nenv <- prepare stmts env
     case nenv of
@@ -38,7 +33,7 @@ propagate stmts t env = do
 
 -- STATEMENT TYPE CHECKER ------------------------------------------------------------
 
-infer :: Stmt -> (Env Type, Env TClosure) -> Result (Either Type (Env Type, Env TClosure))
+infer :: Stmt -> TypeCheckEnv -> Result (Either Type TypeCheckEnv)
 
 -- Variables
 infer (SLet x e) env@(vars, funs) = do
@@ -56,9 +51,12 @@ infer (SSet x e) env@(vars, funs) = do
         Just nvars  -> return (Right (nvars, funs))
 
 -- Functions
-infer (SFun f x t e) (vars, funs) = do
-    ret <- E.infer e (bind x t vars, funs)
-    return (Right (vars, bind f (TFun t ret) funs))
+infer (SFun id params rtn body expr) env@(vars, funs) = do
+    let fenv = propagate body expr
+    let fun = TFun params rtn fenv
+    return (Right (vars, bind id fun funs))
+
+infer (SApp id args) env = E.appFunc id args env
 
 -- Control Flow
 infer (SIf c st t) env = do

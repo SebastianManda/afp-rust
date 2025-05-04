@@ -1,12 +1,12 @@
 module Interp.Expr where
 
-import Evaluator
+import Evaluator ( Result, throw ) 
+import Lang.Abs ( Exp(..), Ident, Param(..) )
+import Env ( Env, find )
+import Value ( Value(..), Closure( Fun), InterpEnv )
+import Shared ( bindArgs, verifyArgs )
 
-import Env
-import Value
-import Lang.Abs ( Exp(..), Ident )
-
-arithmetic :: (Exp, Exp) -> (Env Value, Env Closure) -> (Integer -> Integer -> Integer) -> Result Value
+arithmetic :: (Exp, Exp) -> InterpEnv -> (Integer -> Integer -> Integer) -> Result Value
 arithmetic (e1, e2) env f = do
     v1 <- interp e1 env
     v2 <- interp e2 env
@@ -14,17 +14,17 @@ arithmetic (e1, e2) env f = do
         (VInt i1, VInt i2) -> return $ VInt (f i1 i2)
         _                  -> throw "Arithmetic can only be performed on integers"
 
-logic :: (Exp, Exp) -> (Env Value, Env Closure) -> (Bool -> Bool -> Bool) -> Result Value
+logic :: (Exp, Exp) -> InterpEnv -> (Bool -> Bool -> Bool) -> Result Value
 logic (e1, e2) env f =  do
     v1 <- interp e1 env
     v2 <- interp e2 env
     case (v1, v2) of
         (VBool b1, VBool b2) -> return $ VBool (f b1 b2)
         _                    -> throw "Boolean operations can only be performed on booleans"
-        
+
 -- EXPRESSION INTERPRETER ------------------------------------------------------------
 
-interp :: Exp -> (Env Value, Env Closure) -> Result Value
+interp :: Exp -> InterpEnv -> Result Value
 
 -- Void
 interp EVoid _ = return VEmpty
@@ -90,19 +90,27 @@ interp (EIf c iff els) env = do
         VBool False -> interp els env
         _           -> throw "Condition must be a boolean"
 
--- Let bindings
--- interp (ELet x e body) env@(vars, funs) = do
---     arg <- interp e env
---     interp body (bind x arg vars, funs)
-interp (EVar x) (vars, _) =
-    case find x vars of
-        Just val -> return val
-        Nothing  -> throw $ "Variable " ++ show x ++ " is not bound"
 
 -- Functions
-interp (EApp f e) env@(vars, funs) = do
-    case find f funs of
-        Just (Fun x body) -> do
-            arg <- interp e env
-            interp body (bind x arg vars, funs)
-        _        -> throw "Arguments can only be applied to functions"
+interp (EVar x) (vars, _) = case find x vars of
+    Just val -> return val
+    Nothing  -> throw $ "Variable " ++ show x ++ " is not bound"
+
+interp (EApp id args) env@(vars, funs) = case appFunc id args env of
+    Left err     -> throw err
+    Right result -> case result of
+        Left val   -> return val
+        Right nenv -> return VEmpty
+
+-- | Common function for function application. Binds the arguments to their values and prepares the function call.
+appFunc :: Ident -> [Exp] -> InterpEnv -> Result (Either Value InterpEnv)
+appFunc id args env@(vars, funs) = do
+    case find id funs of
+        Nothing                  -> throw "Arguments can only be applied to functions"
+        Just (Fun params fenv) -> do
+            case verifyArgs (map (`interp` env) args) of
+                Left err      -> throw err
+                Right argVals -> do
+                    let argIds = map (\(Param id _) -> id) params
+                    let fvars = bindArgs (zip argIds argVals) vars
+                    fenv (fvars, funs)

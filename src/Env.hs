@@ -1,7 +1,6 @@
 module Env where
 
 import qualified Data.Map as Map
-
 import Lang.Abs ( Ident )
 
 type Env a = Map.Map Ident (a, Bool)
@@ -24,3 +23,13 @@ update :: Ident -> a -> Env a -> Maybe (Env a)
 update id val env = case Map.lookup id env of
     Just (v, True) -> Just (Map.insert id (val, True) env)
     _              -> Nothing
+
+-- | Merges an env and a list defining an env. The list is a list of tuples (Ident, (a, Bool)).
+merge :: Env a -> [(Ident, (a, Bool))] -> Env a
+merge oenv nenv = case nenv of
+    [] -> oenv
+    ((k, (v, b)):kvs) -> case Map.lookup k oenv of
+        Just (_, True) | b -> case update k v oenv of
+            Just noenv -> merge noenv kvs
+            Nothing    -> merge oenv kvs
+        _ -> merge oenv kvs

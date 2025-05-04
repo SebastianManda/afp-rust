@@ -2,7 +2,9 @@ module Value where
 
 import Lang.Abs ( Exp
                 , Ident
-                , Type )
+                , Type, Stmt, Param )
+import Env
+import Evaluator (Result)
 
 data Value 
     = VInt Integer
@@ -10,8 +12,11 @@ data Value
     | VEmpty
   deriving (Show, Eq)
 
-data Closure = Fun Ident Exp
-  deriving (Show, Eq)
+data Closure = Fun [Param] (InterpEnv -> Result (Either Value InterpEnv))
+  -- deriving (Show, Eq)
 
-data TClosure = TFun Type Type
-  deriving (Show, Eq)
+data TClosure = TFun [Param] Type (TypeCheckEnv -> Result (Either Type TypeCheckEnv))
+  -- deriving (Show, Eq)
+
+type InterpEnv = (Env Value, Env Closure)
+type TypeCheckEnv = (Env Type, Env TClosure)

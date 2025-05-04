@@ -10,6 +10,13 @@ Program. Program ::= [Stmt] Exp0 ;
 (:).   [Stmt] ::= Stmt ";" [Stmt] ;
 (:).   [Stmt] ::= Stmt1 [Stmt] ;
 
+-- KEY-VALUE PAIRS ----------------------------------------------------
+
+Param. Param ::= Ident ":" Type ;
+[].  [Param] ::= ;
+(:[]). [Param] ::= Param ;  
+(:). [Param] ::= Param "," [Param] ;
+
 -- TYPES --------------------------------------------------------------
 
 TInt.   Type1 ::= "int";
@@ -25,12 +32,18 @@ _. Type  ::= Type1;
 SSet.       Stmt  ::= "set" Ident "=" Exp;
 SLet.       Stmt  ::= "let" Ident "=" Exp ;
 SMut.       Stmt  ::= "let" "mut" Ident "=" Exp ;
-SFun.       Stmt  ::= "fun" Ident "(" Ident ":" Type ") =" Exp ;
+SApp.       Stmt  ::= "apply" Ident "(" [Exp] ")" ;
+
 SIf.        Stmt1 ::= "if" Exp "{" [Stmt] Exp0 "}" ;
 SIfElse.    Stmt1 ::= "if" Exp "{" [Stmt] Exp0 "}" "else" "{" [Stmt] Exp0 "}" ;
 SWhile.     Stmt1 ::= "while" Exp "{" [Stmt] "}" ;
+SFun.       Stmt1 ::= "fun" Ident "(" [Param] ")" "->" Type "=" "{" [Stmt] Exp0 "}" ;
 
 -- EXPRESSIONS --------------------------------------------------------
+
+[].  [Exp] ::= ;                      
+(:[]). [Exp] ::= Exp ;                 
+(:). [Exp] ::= Exp "," [Exp] ;     
 
 -- Arithmetic
 EInt. Exp7  ::= Integer;
@@ -56,14 +69,12 @@ ELeq. Exp4 ::= Exp4 "<=" Exp5;
 EGeq. Exp4 ::= Exp4 ">=" Exp5;
 
 -- Control flow
-EIf.  Exp8 ::= "if" Exp "then" Exp "else" Exp;
+EIf.  Exp8 ::= "inif" Exp "then" Exp "else" Exp;
 
 -- Let bindings
--- ELet. Exp8 ::= "let" Ident "=" Exp "in" Exp;
 EVar. Exp8 ::= Ident;
 
--- Functions
-EApp.   Exp8 ::= Ident Exp7;
+EApp.   Exp8 ::= Ident "(" [Exp] ")" ;
 EVoid.  Exp0 ::= ;
 
 -- This part sets up the order of operation

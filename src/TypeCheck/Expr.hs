@@ -1,16 +1,12 @@
 module TypeCheck.Expr where
 
-import Evaluator
+import Evaluator ( Result, throw )
+import Env ( Env, find )
+import Value ( TClosure( TFun ), TypeCheckEnv )
+import Lang.Abs ( Exp(..), Ident, Type(..), Param(..) )
+import Shared ( bindArgs, verifyArgs, checkArgs )
 
-import Env
-
-import Value ( TClosure( TFun ) )
-
-import Lang.Abs ( Exp(..)
-                , Ident
-                , Type(..) )
-
-arithmetic :: (Exp, Exp) -> (Env Type, Env TClosure) -> Result Type
+arithmetic :: (Exp, Exp) -> TypeCheckEnv -> Result Type
 arithmetic (e1, e2) env = do
     t1 <- infer e1 env
     t2 <- infer e2 env
@@ -18,7 +14,7 @@ arithmetic (e1, e2) env = do
         (TInt, TInt) -> return TInt
         _            -> throw "Arithmetic can only be performed on integers"
 
-logic :: (Exp, Exp) -> (Env Type, Env TClosure) -> Result Type
+logic :: (Exp, Exp) -> TypeCheckEnv -> Result Type
 logic (e1, e2) env =  do
     t1 <- infer e1 env
     t2 <- infer e2 env
@@ -26,7 +22,7 @@ logic (e1, e2) env =  do
         (TBool, TBool) -> return TBool
         _              -> throw "Boolean operations can only be performed on booleans"
 
-comparison :: (Exp, Exp) -> (Env Type, Env TClosure) -> Result Type
+comparison :: (Exp, Exp) -> TypeCheckEnv -> Result Type
 comparison (e1, e2) env =  do
     t1 <- infer e1 env
     t2 <- infer e2 env
@@ -36,7 +32,7 @@ comparison (e1, e2) env =  do
 
 -- EXPRESSION TYPE CHECKER -----------------------------------------------------------
 
-infer :: Exp -> (Env Type, Env TClosure) -> Result Type
+infer :: Exp -> TypeCheckEnv -> Result Type
 
 -- Void
 infer EVoid _ = return TVoid
@@ -94,10 +90,32 @@ infer (EVar x) (vars, _) =
         Nothing -> throw $ "Variable " ++ show x ++ " is not bound"
 
 -- Functions
-infer (EApp f e) env@(_, funs) = do
-    case find f funs of
-        Just (TFun targ tret) -> do
-            eT <- infer e env
-            if eT == targ then return tret
-            else throw "Function argument type mismatch"
-        _        -> throw "Cannot call non-function"
+infer (EApp id args) env = case appFunc id args env of 
+    Left err     -> throw err
+    Right result -> case result of
+        Left t     -> return t
+        Right nenv -> return TVoid
+
+-- | Common function for function application. Binds the arguments to their values and prepares the function call.
+appFunc :: Ident -> [Exp] -> TypeCheckEnv -> Result (Either Type TypeCheckEnv)
+appFunc id args env@(vars, funs) = do
+    case find id funs of
+        Nothing                     -> throw "Arguments can only be applied to functions"
+        Just (TFun params rtn fenv) -> do
+            let paramTypes = map (\(Param _ t) -> t) params
+            case verifyArgs (map (`infer` env) args) of
+                Left err       -> throw err
+                Right argTypes -> if not (checkArgs argTypes paramTypes)
+                    then throw "Function argument type mismatch"
+                    else do
+                        let paramIds = map (\(Param id _) -> id) params
+                        let fvars = bindArgs (zip paramIds argTypes) vars
+                        case fenv (fvars, funs) of
+                            Left err     -> throw err
+                            Right result -> case result of
+                                Left t     -> if t == rtn 
+                                    then return (Left rtn)
+                                    else throw "Function return type mismatch"
+                                Right nenv -> if rtn == TVoid 
+                                    then return (Right env)
+                                    else throw "Function return type mismatch"
