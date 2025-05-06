@@ -9,7 +9,8 @@ import Evaluator (Result)
 data Value 
     = VInt Integer
     | VBool Bool
-    | VEmpty
+    | VVar Ident Value
+    | VVoid
   deriving (Show, Eq)
 
 data Closure = Fun [Param] (InterpEnv -> Result (Either Value InterpEnv))

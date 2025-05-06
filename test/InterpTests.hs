@@ -6,7 +6,7 @@ import Run ( run )
 import Value
 
 import Data.Either ( isLeft )
-import Value (Value(VEmpty))
+import Value (Value(VVoid))
 
 interpTest :: String -> Value -> Spec
 interpTest input expected =
@@ -52,7 +52,7 @@ test = hspec $ do
         it "should work for while" $ do
             run "let mut x = 2; while x < 5 { set x = x + 1; } x" `shouldBe` Right (VInt 5)
             run "let mut x = 6; while x < 5 { set x = x + 1; } x" `shouldBe` Right (VInt 6)
-            run "let mut x = 2; while x < 5 { set x = x + 1; }" `shouldBe` Right VEmpty
+            run "let mut x = 2; while x < 5 { set x = x + 1; }" `shouldBe` Right VVoid
         it "should not update env with new vars" $ do
             run "let mut x = 2; if x == 2 { let y = 3; } y" `shouldSatisfy` isLeft
             run "let mut x = 2; if x == 2 { let y = 3; } else { let y = 4; } y" `shouldSatisfy` isLeft
@@ -65,13 +65,23 @@ test = hspec $ do
 
     describe "Interpreter: functions" $ do
         it "should work for empty args" $ do
-            run "fun f() -> void = {} f()" `shouldBe` Right VEmpty
+            run "fun f() -> void = {} f()" `shouldBe` Right VVoid
             run "fun f() -> int = { 1 } f() + 1" `shouldBe` Right (VInt 2)
             run "fun f() -> int = { 1 } apply f();" `shouldBe` Right (VInt 1)
             run "fun f() -> int = { 1 } apply f();" `shouldBe` Right (VInt 1)
         it "should work for functions with arguments" $ do
-            run "fun mult(x: int, y: int) -> void = {} mult(2, 3)" `shouldBe` Right VEmpty
+            run "fun mult(x: int, y: int) -> void = {} mult(2, 3)" `shouldBe` Right VVoid
             run "fun mult(x: int, y: int) -> int = { x * y } mult(2, 3)" `shouldBe` Right (VInt 6)
             run "fun mult(x: int, y: int) -> int = { let z = 1; x * y } mult(2, 3) + 1" `shouldBe` Right (VInt 7)
             run "let x = 2; fun mult(x: int) -> void = {} apply mult(x); x" `shouldBe` Right (VInt 2)
             run "fun f(x: bool) -> int = { if x { 2 } else { 13 } } f(True)" `shouldBe` Right (VInt 2)
+        it "should work for functions with mutable arguments" $ do
+            run "fun f(mut x: int) -> void = { set x = 3; } let mut x = 1; apply f(x); x" `shouldBe` Right (VInt 3)
+            run "fun f(mut y: int) -> void = { set y = y + 1; } let mut x = 1; apply f(x); apply f(x); x" `shouldBe` Right (VInt 3)
+            run "fun f(mut x: int) -> void = { set x = x + 1; } let mut x = 1; apply f(x); apply f(x); x" `shouldBe` Right (VInt 3)
+        it "should work on functions within functions" $ do
+            run "fun f(mut x: int) -> void = { fun g(mut x: int) -> void = { set x = x + 1; } apply g(x); } let mut x = 1; apply f(x); apply f(x); x" `shouldBe` Right (VInt 3)
+        it "should not update env with unmutable vars" $ do
+            run "fun f(mut x: int) -> void = { set x = x + 1; } let x = 2; apply f(x); x" `shouldBe` Right (VInt 2)
+        it "should not update non mutavble vars" $ do
+            run "fun f(x: int) -> void = { set x = x + 1; } let mut x = 2; apply f(x); x" `shouldSatisfy` isLeft

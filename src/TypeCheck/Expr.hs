@@ -1,10 +1,10 @@
 module TypeCheck.Expr where
 
 import Evaluator ( Result, throw )
-import Env ( Env, find )
+import Env ( Env, find, bindParams, empty )
 import Value ( TClosure( TFun ), TypeCheckEnv )
 import Lang.Abs ( Exp(..), Ident, Type(..), Param(..) )
-import Shared ( bindArgs, verifyArgs, checkArgs )
+import Shared ( verifyArgs, checkArgs )
 
 arithmetic :: (Exp, Exp) -> TypeCheckEnv -> Result Type
 arithmetic (e1, e2) env = do
@@ -81,9 +81,6 @@ infer (EIf c iff els) env = do
         _     -> throw "Condition must be a boolean"
 
 -- Let bindings
--- infer (ELet x e body) env@(vars, funs) = do
---     t <- infer e env
---     infer body (bind x t vars, funs)
 infer (EVar x) (vars, _) =
     case find x vars of
         Just t  -> return t
@@ -102,15 +99,14 @@ appFunc id args env@(vars, funs) = do
     case find id funs of
         Nothing                     -> throw "Arguments can only be applied to functions"
         Just (TFun params rtn fenv) -> do
-            let paramTypes = map (\(Param _ t) -> t) params
+            let paramTypes = getParamTypes params
             case verifyArgs (map (`infer` env) args) of
                 Left err       -> throw err
                 Right argTypes -> if not (checkArgs argTypes paramTypes)
                     then throw "Function argument type mismatch"
                     else do
-                        let paramIds = map (\(Param id _) -> id) params
-                        let fvars = bindArgs (zip paramIds argTypes) vars
-                        case fenv (fvars, funs) of
+                        let fvars = bindParams (zip params argTypes) empty
+                        case fenv (fvars, empty) of
                             Left err     -> throw err
                             Right result -> case result of
                                 Left t     -> if t == rtn 
@@ -119,3 +115,10 @@ appFunc id args env@(vars, funs) = do
                                 Right nenv -> if rtn == TVoid 
                                     then return (Right env)
                                     else throw "Function return type mismatch"
+
+getParamTypes :: [Param] -> [Type]
+getParamTypes [] = []
+getParamTypes (PVal _ t:ps) = t : getParamTypes ps
+getParamTypes (PMut _ t:ps) = t : getParamTypes ps
+
+

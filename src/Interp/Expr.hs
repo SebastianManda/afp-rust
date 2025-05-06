@@ -1,10 +1,12 @@
 module Interp.Expr where
 
+import qualified Env as E ( Env, empty, find, mergeDEnv )
+import qualified Interp.Env as IE ( find, bindParams, mergeSEnv )
+
 import Evaluator ( Result, throw ) 
 import Lang.Abs ( Exp(..), Ident, Param(..) )
-import Env ( Env, find )
-import Value ( Value(..), Closure( Fun), InterpEnv )
-import Shared ( bindArgs, verifyArgs )
+import Value ( Value(..), Closure( Fun ), InterpEnv )
+import Shared ( verifyArgs, collapseEnvs )
 
 arithmetic :: (Exp, Exp) -> InterpEnv -> (Integer -> Integer -> Integer) -> Result Value
 arithmetic (e1, e2) env f = do
@@ -27,7 +29,7 @@ logic (e1, e2) env f =  do
 interp :: Exp -> InterpEnv -> Result Value
 
 -- Void
-interp EVoid _ = return VEmpty
+interp EVoid _ = return VVoid
 
 -- Arithmetic
 interp (EInt i) _ = return $ VInt i
@@ -90,9 +92,8 @@ interp (EIf c iff els) env = do
         VBool False -> interp els env
         _           -> throw "Condition must be a boolean"
 
-
 -- Functions
-interp (EVar x) (vars, _) = case find x vars of
+interp (EVar x) (vars, _) = case IE.find x vars of
     Just val -> return val
     Nothing  -> throw $ "Variable " ++ show x ++ " is not bound"
 
@@ -100,17 +101,33 @@ interp (EApp id args) env@(vars, funs) = case appFunc id args env of
     Left err     -> throw err
     Right result -> case result of
         Left val   -> return val
-        Right nenv -> return VEmpty
+        Right nenv -> return VVoid
 
 -- | Common function for function application. Binds the arguments to their values and prepares the function call.
 appFunc :: Ident -> [Exp] -> InterpEnv -> Result (Either Value InterpEnv)
 appFunc id args env@(vars, funs) = do
-    case find id funs of
-        Nothing                  -> throw "Arguments can only be applied to functions"
+    case E.find id funs of
+        Nothing                -> throw "Arguments can only be applied to functions"
         Just (Fun params fenv) -> do
-            case verifyArgs (map (`interp` env) args) of
+            case verifyArgs (map (`interpForFun` env) args) of
                 Left err      -> throw err
                 Right argVals -> do
-                    let argIds = map (\(Param id _) -> id) params
-                    let fvars = bindArgs (zip argIds argVals) vars
-                    fenv (fvars, funs)
+                    let fvars = IE.bindParams (zip params argVals) E.empty
+                    case fenv (fvars, E.empty) of
+                        Left err     -> throw err
+                        Right (Left val) -> return (Left val)
+                        Right (Right nenv) -> return (Right (collapseEnvs env nenv IE.mergeSEnv))
+
+-- | Interpret a function variable with the given environment. Returns VVars instead of other Values if Identifiers are found.
+interpForFun :: Exp -> InterpEnv -> Result Value 
+interpForFun (EVar x) (vars, _) = do
+    case IE.find x vars of
+        Just val -> return (VVar x val)
+        Nothing  -> throw $ "Variable " ++ show x ++ " is not bound"
+interpForFun (EIf c t e) env = do
+    cond <- interp c env
+    case cond of
+        VBool True  -> interpForFun t env
+        VBool False -> interpForFun e env
+        _           -> throw "Condition must be a boolean"
+interpForFun exp env = interp exp env

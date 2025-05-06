@@ -12,10 +12,12 @@ Program. Program ::= [Stmt] Exp0 ;
 
 -- KEY-VALUE PAIRS ----------------------------------------------------
 
-Param. Param ::= Ident ":" Type ;
-[].  [Param] ::= ;
-(:[]). [Param] ::= Param ;  
-(:). [Param] ::= Param "," [Param] ;
+PVal. Param ::= Ident ":" Type ;
+PMut. Param ::= "mut" Ident ":" Type ;
+
+[].     [Param] ::= ;
+(:[]).  [Param] ::= Param ;  
+(:).    [Param] ::= Param "," [Param] ;
 
 -- TYPES --------------------------------------------------------------
 

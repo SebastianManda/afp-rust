@@ -36,6 +36,7 @@ library lang
                     , Interp.Expr
                     , Interp.Stmt
                     , Interp.Prog
+                    , Interp.Env
                     , TypeCheck.Expr
                     , TypeCheck.Stmt
                     , TypeCheck.Prog

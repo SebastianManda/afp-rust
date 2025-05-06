@@ -6,8 +6,9 @@ import qualified Interp.Expr as E (interp, appFunc)
 import Evaluator (Result, throw)
 import Control.Monad (foldM)
 import Lang.Abs ( Stmt(..), Exp, Ident, Param(..) )
-import Value ( Value( VBool, VEmpty ), Closure( Fun ), InterpEnv )
-import Env ( Env, find, bind, bindMut, update )
+import Value ( Value( VBool, VVoid ), Closure( Fun ), InterpEnv )
+import Env ( Env, bind, bindMut, mergeDEnv )
+import Interp.Env ( find, update )
 import Shared ( collapseEnvs )
 
 -- | Interprets a list of statements. Returns the final environment.
@@ -28,7 +29,7 @@ propagate stmts e env = do
         Right nenv' -> do
             val <- E.interp e nenv'
             case val of
-                VEmpty -> return (Right (collapseEnvs env nenv'))
+                VVoid -> return (Right (collapseEnvs env nenv' mergeDEnv))
                 _      -> return (Left val)
 
 -- STATEMENT INTERPRETER -------------------------------------------------------------
