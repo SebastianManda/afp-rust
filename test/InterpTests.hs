@@ -58,6 +58,7 @@ test = hspec $ do
             run "let mut x = 2; if x == 2 { let y = 3; } else { let y = 4; } y" `shouldSatisfy` isLeft
             run "let mut x = 2; while x < 5 { let y = 3; set x = x + 1; } x + 1" `shouldBe` Right (VInt 6)
             run "let mut x = 2; while x < 5 { let y = 3; set x = x + 1; } y" `shouldSatisfy` isLeft
+            run "let mut x = 2; while x < 5 { let mut x = 1; set x = x + 1; } x" `shouldBe` Right (VInt 2)
         it "should not work for non-boolean conditions" $ do
             run "let mut x = 2; if x { set x = x + 1; } x + 1" `shouldSatisfy` isLeft
             run "let mut x = 2; if 32 { set x = x + 1; } else { set x = x - 1; } x" `shouldSatisfy` isLeft
